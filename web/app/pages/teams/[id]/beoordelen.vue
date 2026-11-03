@@ -34,15 +34,43 @@ const perCategorie = computed(() => {
   return groepen
 })
 
-async function geef(skill: RecordModel, score: number) {
-  const l = kind.value!
-  try {
-    // shortcut: offline krijgt de beoordeling de datum van het versturen (autodate op de server); prima zolang offline kort duurt.
-    const r = await schrijf('beoordelingen', 'create', null, { leerling: l.id, skill: skill.id, score, door: user.value!.id })
-    scores.value[`${l.id}:${skill.id}`] = { score, datum: r.datum ?? new Date().toISOString() }
-    toast.add({ title: `${kindNaam(l)}: ${skill.naam} → ${sterrenTekst(score)}`, color: 'success', duration: 1500 })
-  } catch (e) { fout(e) }
+// Tikken op sterren is een concept; pas bij "Klaar" wordt alles opgeslagen (een misklik komt zo niet in het verloop).
+const concept = ref<Record<string, number>>({}) // `${leerling}:${skill}` -> sterren
+const aantalConcept = computed(() => Object.keys(concept.value).length)
+const sleutel = (skill: RecordModel) => `${kind.value!.id}:${skill.id}`
+const getoond = (skill: RecordModel) => concept.value[sleutel(skill)] ?? scores.value[sleutel(skill)]?.score ?? 0
+
+function kies(skill: RecordModel, n: number) {
+  const k = sleutel(skill)
+  // Nog eens op dezelfde ster tikken, of terug naar de opgeslagen score: concept weg.
+  if (concept.value[k] === n || scores.value[k]?.score === n) delete concept.value[k]
+  else concept.value[k] = n
 }
+
+const bezig = ref(false)
+async function klaar() {
+  bezig.value = true
+  let opgeslagen = 0
+  for (const [k, score] of Object.entries(concept.value)) {
+    const [leerling, skill] = k.split(':')
+    try {
+      // shortcut: offline krijgt de beoordeling de datum van het versturen (autodate op de server); prima zolang offline kort duurt.
+      const r = await schrijf('beoordelingen', 'create', null, { leerling, skill, score, door: user.value!.id })
+      scores.value[k] = { score, datum: r.datum ?? new Date().toISOString() }
+      delete concept.value[k]
+      opgeslagen++
+    } catch (e) { fout(e) }
+  }
+  bezig.value = false
+  if (opgeslagen) toast.add({ title: `${opgeslagen} ${opgeslagen === 1 ? 'beoordeling' : 'beoordelingen'} opgeslagen`, color: 'success' })
+  if (!aantalConcept.value) await navigateTo(`/teams/${id}`)
+}
+
+// Niet ongemerkt weggaan met niet-opgeslagen sterren
+onBeforeRouteLeave(() => aantalConcept.value === 0 || bezig.value || confirm(`${aantalConcept.value} beoordeling(en) zijn nog niet opgeslagen. Toch weggaan?`))
+const waarschuw = (e: BeforeUnloadEvent) => { if (aantalConcept.value) e.preventDefault() }
+onMounted(() => window.addEventListener('beforeunload', waarschuw))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', waarschuw))
 </script>
 
 <template>
@@ -60,7 +88,8 @@ async function geef(skill: RecordModel, score: number) {
           <div class="mb-1 flex items-baseline justify-between gap-2">
             <span class="font-medium">{{ s.naam }}</span>
             <span class="text-xs text-muted">
-              <template v-if="scores[`${kind.id}:${s.id}`]">{{ scores[`${kind.id}:${s.id}`]!.score }}/{{ MAX_STERREN }} · {{ datumTekst(scores[`${kind.id}:${s.id}`]!.datum) }}</template>
+              <template v-if="concept[`${kind.id}:${s.id}`]"><strong class="text-default">{{ concept[`${kind.id}:${s.id}`] }}/{{ MAX_STERREN }} · nog niet opgeslagen</strong></template>
+              <template v-else-if="scores[`${kind.id}:${s.id}`]">{{ scores[`${kind.id}:${s.id}`]!.score }}/{{ MAX_STERREN }} · {{ datumTekst(scores[`${kind.id}:${s.id}`]!.datum) }}</template>
               <template v-else>Nog niet beoordeeld</template>
             </span>
           </div>
@@ -69,20 +98,22 @@ async function geef(skill: RecordModel, score: number) {
             <UButton
               v-for="n in MAX_STERREN" :key="n"
               :aria-label="sterrenTekst(n)"
-              :aria-pressed="scores[`${kind.id}:${s.id}`]?.score === n"
+              :aria-pressed="getoond(s) === n"
               color="primary" variant="ghost" size="xl" class="size-14 justify-center p-2"
-              @click="geef(s, n)"
+              @click="kies(s, n)"
             >
-              <Ster :vol="n <= (scores[`${kind.id}:${s.id}`]?.score ?? 0)" />
+              <Ster :vol="n <= getoond(s)" />
             </UButton>
           </div>
         </div>
       </section>
 
       <OnderBalk>
-        <UButton label="Vorige" icon="i-lucide-chevron-left" color="neutral" variant="outline" size="xl" :disabled="index === 0" @click="index--" />
-        <UButton :label="index < kinderen.length - 1 ? `Volgende: ${kindNaam(kinderen[index + 1])}` : 'Klaar'" trailing-icon="i-lucide-chevron-right" size="xl" block
-          @click="index < kinderen.length - 1 ? index++ : navigateTo(`/teams/${id}`)" />
+        <UButton icon="i-lucide-chevron-left" color="neutral" variant="outline" size="xl" aria-label="Vorige kind" :disabled="index === 0" @click="index--" />
+        <UButton v-if="index < kinderen.length - 1" :label="kindNaam(kinderen[index + 1])" :aria-label="`Volgende kind: ${kindNaam(kinderen[index + 1])}`"
+          trailing-icon="i-lucide-chevron-right" color="neutral" variant="outline" size="xl" class="min-w-0 flex-1 justify-between" @click="index++" />
+        <UButton :label="aantalConcept ? `Klaar (${aantalConcept})` : 'Klaar'" icon="i-lucide-check" size="xl" :loading="bezig"
+          :class="index < kinderen.length - 1 ? '' : 'flex-1 justify-center'" @click="klaar" />
       </OnderBalk>
     </template>
   </div>
