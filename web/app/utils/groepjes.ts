@@ -1,4 +1,4 @@
-export type Kind = { id: string; naam: string; scores: Record<string, number> } // skillId -> score 1 t/m 3
+export type Kind = { id: string; naam: string; scores: Record<string, number> } // skillId -> score 1 t/m 5 sterren
 
 export function maakGroepjes<K extends Kind>(kinderen: K[], oefeningSkills: string[], grootte: number) {
   const nietBeoordeeld = kinderen.filter(k => oefeningSkills.some(s => k.scores[s] == null))

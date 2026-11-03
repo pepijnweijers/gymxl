@@ -40,7 +40,7 @@ async function geef(skill: RecordModel, score: number) {
     // shortcut: offline krijgt de beoordeling de datum van het versturen (autodate op de server); prima zolang offline kort duurt.
     const r = await schrijf('beoordelingen', 'create', null, { leerling: l.id, skill: skill.id, score, door: user.value!.id })
     scores.value[`${l.id}:${skill.id}`] = { score, datum: r.datum ?? new Date().toISOString() }
-    toast.add({ title: `${kindNaam(l)}: ${skill.naam} → ${SCORES[score - 1]!.label}`, color: 'success', duration: 1500 })
+    toast.add({ title: `${kindNaam(l)}: ${skill.naam} → ${sterrenTekst(score)}`, color: 'success', duration: 1500 })
   } catch (e) { fout(e) }
 }
 </script>
@@ -59,19 +59,22 @@ async function geef(skill: RecordModel, score: number) {
         <div v-for="s in lijst" :key="s.id" class="mb-4">
           <div class="mb-1 flex items-baseline justify-between gap-2">
             <span class="font-medium">{{ s.naam }}</span>
-            <span v-if="scores[`${kind.id}:${s.id}`]" class="text-xs text-muted">{{ datumTekst(scores[`${kind.id}:${s.id}`]!.datum) }}</span>
+            <span class="text-xs text-muted">
+              <template v-if="scores[`${kind.id}:${s.id}`]">{{ scores[`${kind.id}:${s.id}`]!.score }}/{{ MAX_STERREN }} · {{ datumTekst(scores[`${kind.id}:${s.id}`]!.datum) }}</template>
+              <template v-else>Nog niet beoordeeld</template>
+            </span>
           </div>
           <p v-if="s.omschrijving" class="mb-1 text-sm text-muted">{{ s.omschrijving }}</p>
-          <div class="grid grid-cols-3 gap-2" role="group" :aria-label="`${s.naam} voor ${kindNaam(kind)}`">
+          <div class="flex gap-1" role="group" :aria-label="`${s.naam} voor ${kindNaam(kind)}`">
             <UButton
-              v-for="o in SCORES" :key="o.waarde"
-              :label="`${o.waarde} ${o.label}`"
-              :aria-pressed="scores[`${kind.id}:${s.id}`]?.score === o.waarde"
-              :variant="scores[`${kind.id}:${s.id}`]?.score === o.waarde ? 'solid' : 'outline'"
-              :icon="scores[`${kind.id}:${s.id}`]?.score === o.waarde ? 'i-lucide-check' : undefined"
-              size="xl" block class="justify-center"
-              @click="geef(s, o.waarde)"
-            />
+              v-for="n in MAX_STERREN" :key="n"
+              :aria-label="sterrenTekst(n)"
+              :aria-pressed="scores[`${kind.id}:${s.id}`]?.score === n"
+              color="primary" variant="ghost" size="xl" class="size-14 justify-center p-2"
+              @click="geef(s, n)"
+            >
+              <Ster :vol="n <= (scores[`${kind.id}:${s.id}`]?.score ?? 0)" />
+            </UButton>
           </div>
         </div>
       </section>

@@ -55,10 +55,10 @@ async function opslaan() {
       <li v-for="(lijst, skill) in verloop" :key="skill">
         <div class="flex justify-between gap-2">
           <span class="font-medium">{{ skill }}</span>
-          <UBadge :label="`${lijst.at(-1)!.score} ${SCORES[lijst.at(-1)!.score - 1]!.label}`" variant="subtle" />
+          <Sterren :score="lijst.at(-1)!.score" />
         </div>
         <ol class="text-sm text-muted">
-          <li v-for="b in lijst" :key="b.id">{{ datumTekst(b.datum) }}: {{ b.score }} {{ SCORES[b.score - 1]!.label }} <span>({{ b.expand?.door?.name }})</span></li>
+          <li v-for="b in lijst" :key="b.id">{{ datumTekst(b.datum) }}: {{ b.score }}/{{ MAX_STERREN }} <span>({{ b.expand?.door?.name }})</span></li>
         </ol>
       </li>
     </ul>

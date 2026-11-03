@@ -5,7 +5,11 @@ const isAdmin = useIsAdmin()
 const toast = useToast()
 const clubnaam = ref('GymXL')
 // Opnieuw laden na inloggen: direct na de installatiewizard bestaat de clubnaam pas.
-watch(user, () => lijst('instellingen').then(([r]) => { if (r) clubnaam.value = r.clubnaam }).catch(() => {}), { immediate: true })
+watch(user, (u) => {
+  lijst('instellingen').then(([r]) => { if (r) clubnaam.value = r.clubnaam }).catch(() => {})
+  // Vooraf laden voor offline gebruik in de zaal (zelfde queries als de pagina's).
+  if (u) Promise.all([lijst('oefeningen', { sort: 'naam', expand: 'skills' }), lijst('skills', { sort: 'categorie,naam' })]).catch(() => {})
+}, { immediate: true })
 useHead({ title: clubnaam })
 
 // Offline: wachtrij versturen bij start, zodra er weer bereik is, en elke 30 seconden.

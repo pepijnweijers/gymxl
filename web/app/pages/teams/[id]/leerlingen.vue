@@ -21,6 +21,7 @@ async function laad() {
 }
 onMounted(laad)
 
+const nieuwOpen = ref(false)
 const nieuw = reactive({ voornaam: '', initiaal: '', geboortejaar: undefined as number | undefined })
 async function voegToe() {
   if (!nieuw.voornaam.trim()) return
@@ -29,6 +30,7 @@ async function voegToe() {
     const k = await schrijf('team_leerlingen', 'create', null, { team: id, leerling: l.id }, { leerling: l })
     koppelingen.value.push({ ...k, expand: { leerling: l } })
     Object.assign(nieuw, { voornaam: '', initiaal: '', geboortejaar: undefined })
+    nieuwOpen.value = false
     toast.add({ title: `${kindNaam(l)} toegevoegd`, color: 'success' })
   } catch (e) { fout(e) }
 }
@@ -79,13 +81,22 @@ async function verwijder(k: RecordModel) {
     </ul>
 
     <template v-if="recht.bewerken">
-      <h2 class="mb-2 text-lg font-semibold">Nieuwe leerling</h2>
-      <form class="mb-6 grid grid-cols-[1fr_4rem_6rem] gap-2" @submit.prevent="voegToe">
-        <UInput v-model="nieuw.voornaam" placeholder="Voornaam" aria-label="Voornaam" size="xl" />
-        <UInput v-model="nieuw.initiaal" placeholder="Init." aria-label="Initiaal achternaam" size="xl" maxlength="3" />
-        <UInput v-model.number="nieuw.geboortejaar" type="number" placeholder="Jaar" aria-label="Geboortejaar" size="xl" inputmode="numeric" />
-        <UButton type="submit" label="Toevoegen" icon="i-lucide-plus" size="xl" class="col-span-3" block variant="outline" />
-      </form>
+      <UModal v-model:open="nieuwOpen" title="Nieuwe leerling" description="Alleen voornaam, eventueel een initiaal en het geboortejaar.">
+        <template #body>
+          <form id="nieuwe-leerling" class="space-y-3" @submit.prevent="voegToe">
+            <UFormField label="Voornaam" required><UInput v-model="nieuw.voornaam" size="xl" class="w-full" required /></UFormField>
+            <UFormField label="Initiaal achternaam"><UInput v-model="nieuw.initiaal" size="xl" class="w-full" maxlength="3" /></UFormField>
+            <UFormField label="Geboortejaar"><UInput v-model.number="nieuw.geboortejaar" type="number" inputmode="numeric" size="xl" class="w-full" /></UFormField>
+          </form>
+        </template>
+        <template #footer>
+          <UButton label="Annuleren" color="neutral" variant="outline" @click="nieuwOpen = false" />
+          <UButton type="submit" form="nieuwe-leerling" label="Toevoegen" class="ml-auto" />
+        </template>
+      </UModal>
+      <OnderBalk>
+        <UButton label="Nieuwe leerling" icon="i-lucide-plus" size="xl" block @click="nieuwOpen = true" />
+      </OnderBalk>
       <template v-if="bestaandeKeuze.length">
         <h2 class="mb-2 text-lg font-semibold">Uit een ander team</h2>
         <div class="flex gap-2">

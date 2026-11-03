@@ -15,7 +15,8 @@ export function useFout() {
 
 export const kindNaam = (l: RecordModel | undefined) => l ? [l.voornaam, l.initiaal].filter(Boolean).join(' ') : '?'
 export const datumTekst = (d: string) => d ? new Date(d.replace(' ', 'T')).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : ''
-export const SCORES = [{ waarde: 1, label: 'Nog niet' }, { waarde: 2, label: 'Bezig' }, { waarde: 3, label: 'Beheerst' }]
+export const MAX_STERREN = 5
+export const sterrenTekst = (n: number) => `${n} van ${MAX_STERREN} ${n === 1 ? 'ster' : 'sterren'}`
 
 /** Expand die teamRecht nodig heeft voor rechten via trainersgroepen. */
 export const TEAM_EXPAND = 'groepen_bewerken'

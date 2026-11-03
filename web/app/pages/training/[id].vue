@@ -28,7 +28,7 @@ onMounted(async () => {
     const team = training.value.team
     const [a, o, h] = await Promise.all([
       lijst('aanwezigheid', { filter: pb.filter('training = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }, d => d.training === id),
-      lijst('oefeningen', { sort: 'naam' }),
+      lijst('oefeningen', { sort: 'naam', expand: 'skills' }),
       huidigeScores(team),
       laadIndeling(),
     ])

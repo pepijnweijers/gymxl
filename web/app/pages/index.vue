@@ -8,6 +8,7 @@ const teams = ref<RecordModel[]>([])
 const trainers = ref<RecordModel[]>([])
 const naam = ref('')
 const eigenaar = ref<string>()
+const nieuwOpen = ref(false)
 
 onMounted(async () => {
   teams.value = await lijst('teams', { sort: 'naam', expand: TEAM_EXPAND }).catch(e => (fout(e), []))
@@ -32,7 +33,7 @@ async function maakTeam() {
 
 <template>
   <h1 class="mb-4 text-2xl font-bold">Teams</h1>
-  <p v-if="!teams.length" class="mb-4 text-muted">Je hebt nog geen teams. Maak er hieronder een aan.</p>
+  <p v-if="!teams.length" class="mb-4 text-muted">Je hebt nog geen teams. Maak er onderaan een aan.</p>
   <ul class="mb-6 space-y-2">
     <li v-for="t in teams" :key="t.id">
       <NuxtLink :to="`/teams/${t.id}`" class="flex min-h-14 items-center justify-between rounded-lg border border-default px-4 py-3 hover:bg-elevated">
@@ -41,11 +42,21 @@ async function maakTeam() {
       </NuxtLink>
     </li>
   </ul>
-  <h2 class="mb-2 text-lg font-semibold">Nieuw team</h2>
-  <form class="grid gap-2" @submit.prevent="maakTeam">
-    <UInput v-model="naam" placeholder="Naam van het team" size="xl" aria-label="Naam nieuw team" />
-    <USelectMenu v-if="isAdmin" v-model="eigenaar" :items="trainers.map(t => ({ label: t.name, value: t.id }))" value-key="value"
-      placeholder="Eigenaar: ikzelf" size="xl" aria-label="Eigenaar (trainer)" />
-    <UButton type="submit" label="Team maken" size="xl" icon="i-lucide-plus" block variant="outline" />
-  </form>
+  <UModal v-model:open="nieuwOpen" title="Nieuw team">
+    <template #body>
+      <form id="nieuw-team" class="space-y-3" @submit.prevent="maakTeam">
+        <UFormField label="Naam" required><UInput v-model="naam" size="xl" class="w-full" required /></UFormField>
+        <UFormField v-if="isAdmin" label="Eigenaar" hint="Leeg = jijzelf">
+          <USelectMenu v-model="eigenaar" :items="trainers.map(t => ({ label: t.name, value: t.id }))" value-key="value" placeholder="Ikzelf" size="xl" class="w-full" />
+        </UFormField>
+      </form>
+    </template>
+    <template #footer>
+      <UButton label="Annuleren" color="neutral" variant="outline" @click="nieuwOpen = false" />
+      <UButton type="submit" form="nieuw-team" label="Team maken" class="ml-auto" />
+    </template>
+  </UModal>
+  <OnderBalk>
+    <UButton label="Nieuw team" icon="i-lucide-plus" size="xl" block @click="nieuwOpen = true" />
+  </OnderBalk>
 </template>

@@ -30,7 +30,7 @@ async function verwijder() {
 
 <template>
   <h1 class="mb-1 text-2xl font-bold">Skills</h1>
-  <p class="mb-4 text-sm text-muted">Schaal: {{ SCORES.map(s => `${s.waarde} ${s.label.toLowerCase()}`).join(', ') }}</p>
+  <p class="mb-4 text-sm text-muted">Beoordeling: 1 tot {{ MAX_STERREN }} sterren</p>
   <p v-if="!skills.length" class="text-muted">Nog geen skills.</p>
   <ul class="divide-y divide-default rounded-lg border border-default">
     <li v-for="s in skills" :key="s.id" class="flex min-h-14 items-center gap-2 px-4 py-2">

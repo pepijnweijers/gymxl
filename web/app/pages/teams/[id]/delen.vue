@@ -41,12 +41,15 @@ async function deelMetPersoon() {
     await deel('persoon', u.id, persoonRecht.value)
     toast.add({ title: `Gedeeld met ${u.name}`, color: 'success' })
     email.value = ''
+    persoonOpen.value = false
   } catch (e: any) {
     if (e?.status === 404) toast.add({ title: 'Geen trainer met dit e-mailadres', description: 'Die moet eerst een account hebben.', color: 'warning' })
     else fout(e)
   }
 }
 
+const groepOpen = ref(false)
+const persoonOpen = ref(false)
 const groepId = ref<string>()
 const groepRecht = ref('bewerken')
 async function deelMetGroep() {
@@ -55,6 +58,7 @@ async function deelMetGroep() {
     await deel('groep', groepId.value, groepRecht.value)
     toast.add({ title: 'Gedeeld met groep', color: 'success' })
     groepId.value = undefined
+    groepOpen.value = false
   } catch (e) { fout(e) }
 }
 
@@ -95,20 +99,37 @@ async function verwijderTeam() {
       <li v-if="!gedeeld.length" class="px-3 py-3 text-muted">Nog met niemand gedeeld.</li>
     </ul>
 
-    <h2 class="mb-2 text-lg font-semibold">Delen met een groep</h2>
-    <form class="mb-6 grid grid-cols-[1fr_auto] gap-2" @submit.prevent="deelMetGroep">
-      <USelect v-model="groepId" :items="groepen.map(g => ({ label: g.naam, value: g.id }))" placeholder="Kies trainersgroep" size="xl" aria-label="Trainersgroep" />
-      <USelect v-model="groepRecht" :items="RECHTEN" size="xl" aria-label="Recht voor groep" />
-      <UButton type="submit" label="Delen met groep" size="xl" variant="outline" class="col-span-2" block :disabled="!groepId" />
-    </form>
-    <p v-if="!groepen.length" class="-mt-4 mb-6 text-sm text-muted">De admin maakt trainersgroepen aan bij Beheer.</p>
-
-    <h2 class="mb-2 text-lg font-semibold">Delen met een collega</h2>
-    <form class="mb-8 grid grid-cols-[1fr_auto] gap-2" @submit.prevent="deelMetPersoon">
-      <UInput v-model="email" type="email" placeholder="E-mail collega" aria-label="E-mail collega" size="xl" required />
-      <USelect v-model="persoonRecht" :items="RECHTEN" size="xl" aria-label="Recht voor collega" />
-      <UButton type="submit" label="Delen met collega" size="xl" variant="outline" class="col-span-2" block />
-    </form>
+    <div class="mb-8 grid grid-cols-2 gap-2">
+      <UModal v-model:open="groepOpen" title="Delen met een groep">
+        <UButton label="Met groep" icon="i-lucide-users-round" size="xl" variant="outline" block />
+        <template #body>
+          <p v-if="!groepen.length" class="text-sm text-muted">Er zijn nog geen trainersgroepen. De admin maakt ze aan bij Beheer.</p>
+          <form v-else id="deel-groep" class="space-y-3" @submit.prevent="deelMetGroep">
+            <UFormField label="Trainersgroep" required>
+              <USelect v-model="groepId" :items="groepen.map(g => ({ label: g.naam, value: g.id }))" placeholder="Kies groep" size="xl" class="w-full" />
+            </UFormField>
+            <UFormField label="Recht"><USelect v-model="groepRecht" :items="RECHTEN" size="xl" class="w-full" /></UFormField>
+          </form>
+        </template>
+        <template #footer>
+          <UButton label="Annuleren" color="neutral" variant="outline" @click="groepOpen = false" />
+          <UButton type="submit" form="deel-groep" label="Delen" class="ml-auto" :disabled="!groepId" />
+        </template>
+      </UModal>
+      <UModal v-model:open="persoonOpen" title="Delen met een collega">
+        <UButton label="Met collega" icon="i-lucide-user-plus" size="xl" variant="outline" block />
+        <template #body>
+          <form id="deel-persoon" class="space-y-3" @submit.prevent="deelMetPersoon">
+            <UFormField label="E-mail collega" required><UInput v-model="email" type="email" size="xl" class="w-full" required /></UFormField>
+            <UFormField label="Recht"><USelect v-model="persoonRecht" :items="RECHTEN" size="xl" class="w-full" /></UFormField>
+          </form>
+        </template>
+        <template #footer>
+          <UButton label="Annuleren" color="neutral" variant="outline" @click="persoonOpen = false" />
+          <UButton type="submit" form="deel-persoon" label="Delen" class="ml-auto" />
+        </template>
+      </UModal>
+    </div>
 
     <h2 class="mb-2 text-lg font-semibold">Team</h2>
     <form class="mb-4 flex gap-2" @submit.prevent="hernoem">

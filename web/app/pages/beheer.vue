@@ -23,6 +23,8 @@ async function laad() {
 onMounted(laad)
 
 // Whitelist: wie zelf een account mag maken, en met welke rol
+const toegangOpen = ref(false)
+const groepOpen = ref(false)
 const nieuwEmail = ref('')
 const nieuwRol = ref('trainer')
 const heeftAccount = (email: string) => gebruikers.value.some(u => u.email === email)
@@ -31,6 +33,7 @@ async function toevoegen() {
     await pb.collection('whitelist').create({ email: nieuwEmail.value.trim().toLowerCase(), rol: nieuwRol.value })
     toast.add({ title: `${nieuwEmail.value} kan nu een account maken`, description: `Stuur de link ${location.origin}/registreren`, color: 'success' })
     nieuwEmail.value = ''
+    toegangOpen.value = false
     await laad()
   } catch (e) { fout(e) }
 }
@@ -57,8 +60,11 @@ async function tijdelijkWachtwoord(u: RecordModel) {
 const groepNaam = ref('')
 async function maakGroep() {
   if (!groepNaam.value.trim()) return
-  await pb.collection('trainersgroepen').create({ naam: groepNaam.value.trim(), leden: [] }).catch(fout)
-  groepNaam.value = ''
+  try {
+    await pb.collection('trainersgroepen').create({ naam: groepNaam.value.trim(), leden: [] })
+    groepNaam.value = ''
+    groepOpen.value = false
+  } catch (e) { fout(e) }
   await laad()
 }
 async function zetLeden(g: RecordModel, leden: string[]) {
@@ -72,9 +78,9 @@ async function verwijderGroep(g: RecordModel) {
 const gebruikerKeuze = computed(() => gebruikers.value.filter(u => u.actief).map(u => ({ label: u.name, value: u.id })))
 
 const tabs = [
-  { label: 'Toegang', slot: 'toegang' as const, icon: 'i-lucide-list-checks' },
-  { label: 'Gebruikers', slot: 'gebruikers' as const, icon: 'i-lucide-users' },
-  { label: 'Groepen', slot: 'groepen' as const, icon: 'i-lucide-users-round' },
+  { label: 'Toegang', slot: 'toegang' as const },
+  { label: 'Gebruikers', slot: 'gebruikers' as const },
+  { label: 'Groepen', slot: 'groepen' as const },
 ]
 </script>
 
@@ -83,11 +89,19 @@ const tabs = [
   <UTabs :items="tabs" class="w-full" size="lg">
     <template #toegang>
       <p class="mb-3 text-sm text-muted">Alleen deze e-mailadressen kunnen zelf een account maken via <strong>/registreren</strong>. De rol bepaal je hier.</p>
-      <form class="mb-4 grid grid-cols-[1fr_auto] gap-2" @submit.prevent="toevoegen">
-        <UInput v-model="nieuwEmail" type="email" placeholder="E-mail" aria-label="E-mail toevoegen" size="xl" required />
-        <USelect v-model="nieuwRol" :items="ROLLEN" size="xl" aria-label="Rol" />
-        <UButton type="submit" label="Toevoegen" icon="i-lucide-plus" size="xl" class="col-span-2" block />
-      </form>
+      <UModal v-model:open="toegangOpen" title="Toegang geven" description="Deze persoon kan daarna zelf een account maken.">
+        <UButton label="E-mailadres toevoegen" icon="i-lucide-plus" size="xl" block class="mb-4" />
+        <template #body>
+          <form id="toegang" class="space-y-3" @submit.prevent="toevoegen">
+            <UFormField label="E-mail" required><UInput v-model="nieuwEmail" type="email" size="xl" class="w-full" required /></UFormField>
+            <UFormField label="Rol"><USelect v-model="nieuwRol" :items="ROLLEN" size="xl" class="w-full" /></UFormField>
+          </form>
+        </template>
+        <template #footer>
+          <UButton label="Annuleren" color="neutral" variant="outline" @click="toegangOpen = false" />
+          <UButton type="submit" form="toegang" label="Toevoegen" class="ml-auto" />
+        </template>
+      </UModal>
       <ul class="divide-y divide-default rounded-lg border border-default">
         <li v-for="w in whitelist" :key="w.id" class="flex min-h-12 items-center gap-2 px-3">
           <span class="min-w-0 flex-1 truncate">{{ w.email }}</span>
@@ -117,10 +131,18 @@ const tabs = [
 
     <template #groepen>
       <p class="mb-3 text-sm text-muted">Een team kan gedeeld worden met een hele groep trainers.</p>
-      <form class="mb-4 flex gap-2" @submit.prevent="maakGroep">
-        <UInput v-model="groepNaam" placeholder="Naam groep" aria-label="Naam nieuwe groep" size="xl" class="flex-1" />
-        <UButton type="submit" label="Maken" icon="i-lucide-plus" size="xl" />
-      </form>
+      <UModal v-model:open="groepOpen" title="Nieuwe groep" description="Leden kies je daarna in de lijst.">
+        <UButton label="Nieuwe groep" icon="i-lucide-plus" size="xl" block class="mb-4" />
+        <template #body>
+          <form id="groep" @submit.prevent="maakGroep">
+            <UFormField label="Naam groep" required><UInput v-model="groepNaam" size="xl" class="w-full" required /></UFormField>
+          </form>
+        </template>
+        <template #footer>
+          <UButton label="Annuleren" color="neutral" variant="outline" @click="groepOpen = false" />
+          <UButton type="submit" form="groep" label="Maken" class="ml-auto" />
+        </template>
+      </UModal>
       <div v-for="g in groepen" :key="g.id" class="mb-3 rounded-lg border border-default p-3">
         <div class="mb-2 flex items-center justify-between">
           <h3 class="font-semibold">{{ g.naam }}</h3>

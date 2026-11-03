@@ -40,7 +40,7 @@ const stats = computed(() => [
   { label: 'Leerlingen', waarde: kinderen.value.length, sub: '' },
   { label: 'Trainingen', waarde: trainingen.value.length, sub: trainingen.value[0] ? `laatst ${datumTekst(trainingen.value[0].datum)}` : '' },
   { label: 'Aanwezigheid', waarde: procent(aanwezigheid.value.filter(a => a.aanwezig).length, aanwezigheid.value.length), sub: 'gemiddeld' },
-  { label: 'Beheerst', waarde: procent(scores.value.filter(s => s.score === 3).length, scores.value.length), sub: `van ${scores.value.length} skillscores` },
+  { label: 'Gemiddelde score', waarde: scores.value.length ? `${(scores.value.reduce((som, s) => som + s.score, 0) / scores.value.length).toLocaleString('nl-NL', { maximumFractionDigits: 1 })} / ${MAX_STERREN}` : '–', sub: `sterren, ${scores.value.length} skillscores` },
 ])
 
 async function startTraining() {
