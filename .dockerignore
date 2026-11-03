@@ -1,0 +1,6 @@
+**/node_modules
+web/.nuxt
+web/.output
+web/.data
+pb_data
+*.md

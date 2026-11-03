@@ -1,0 +1,14 @@
+services:
+  gymxl:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+    environment:
+      # Publieke URL, gebruikt in de links van uitnodigings- en wachtwoordmails (alleen bij eerste start)
+      APP_URL: ${APP_URL:-http://localhost:8090}
+    volumes:
+      - pb_data:/pb/pb_data
+
+volumes:
+  pb_data:
