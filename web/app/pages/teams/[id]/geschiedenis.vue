@@ -14,11 +14,11 @@ onMounted(async () => {
   try {
     const f = pb.filter('team = {:id}', { id })
     const [t, tr, a, to, g] = await Promise.all([
-      pb.collection('teams').getOne(id),
-      pb.collection('trainingen').getFullList({ filter: f, sort: '-datum', expand: 'trainer' }),
-      pb.collection('aanwezigheid').getFullList({ filter: pb.filter('training.team = {:id} && aanwezig = true', { id }), fields: 'training' }),
-      pb.collection('training_oefeningen').getFullList({ filter: pb.filter('training.team = {:id}', { id }), sort: 'volgorde', expand: 'oefening' }),
-      pb.collection('groepsindeling').getFullList({ filter: pb.filter('training_oefening.training.team = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }),
+      een('teams', id),
+      lijst('trainingen', { filter: f, sort: '-datum', expand: 'trainer' }),
+      lijst('aanwezigheid', { filter: pb.filter('training.team = {:id} && aanwezig = true', { id }), fields: 'training' }),
+      lijst('training_oefeningen', { filter: pb.filter('training.team = {:id}', { id }), sort: 'volgorde', expand: 'oefening' }),
+      lijst('groepsindeling', { filter: pb.filter('training_oefening.training.team = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }),
     ])
     team.value = t
     trainingen.value = tr

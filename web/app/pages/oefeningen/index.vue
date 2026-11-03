@@ -10,9 +10,9 @@ const laatst = ref<Record<string, RecordModel>>({})
 async function laad() {
   try {
     const [o, s, to] = await Promise.all([
-      pb.collection('oefeningen').getFullList({ sort: 'naam', expand: 'skills' }),
-      pb.collection('skills').getFullList({ sort: 'categorie,naam' }),
-      pb.collection('training_oefeningen').getFullList({ sort: '-training.datum', expand: 'training.team' }),
+      lijst('oefeningen', { sort: 'naam', expand: 'skills' }),
+      lijst('skills', { sort: 'categorie,naam' }),
+      lijst('training_oefeningen', { sort: '-training.datum', expand: 'training.team' }),
     ])
     oefeningen.value = o
     skills.value = s

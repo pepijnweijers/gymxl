@@ -13,7 +13,7 @@ export default defineNuxtConfig({
       theme_color: '#1d4ed8', background_color: '#ffffff', display: 'standalone',
       icons: [{ src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
     },
-    workbox: { navigateFallback: '/', navigateFallbackDenylist: [/^\/api/, /^\/_\//] },
+    workbox: { globPatterns: ['**/*.{js,css,html,svg,webmanifest}'], navigateFallback: '/', navigateFallbackDenylist: [/^\/api/, /^\/_\//] },
   },
   // Iconen meebundelen: geen externe iconen-API (AVG, werkt ook met slecht bereik)
   icon: {

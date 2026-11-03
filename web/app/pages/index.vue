@@ -2,20 +2,29 @@
 import type { RecordModel } from 'pocketbase'
 const pb = usePb()
 const user = useUser()
+const isAdmin = useIsAdmin()
 const fout = useFout()
 const teams = ref<RecordModel[]>([])
+const trainers = ref<RecordModel[]>([])
 const naam = ref('')
+const eigenaar = ref<string>()
 
-const laad = async () => { teams.value = await pb.collection('teams').getFullList({ sort: 'naam' }).catch(e => (fout(e), [])) }
-onMounted(laad)
+onMounted(async () => {
+  teams.value = await lijst('teams', { sort: 'naam', expand: TEAM_EXPAND }).catch(e => (fout(e), []))
+  if (isAdmin.value) trainers.value = await pb.collection('users').getFullList({ sort: 'name', filter: 'actief = true' }).catch(() => [])
+})
 
-const recht = (t: RecordModel) => t.eigenaar === user.value?.id ? 'Eigenaar' : t.bewerkers?.includes(user.value?.id) ? 'Bewerken' : t.inzieners?.includes(user.value?.id) ? 'Inzien' : 'Admin'
+const recht = (t: RecordModel) => {
+  const u = user.value!
+  if (t.eigenaar === u.id) return 'Eigenaar'
+  if (teamRecht(t).bewerken && u.rol !== 'admin') return 'Bewerken'
+  return u.rol === 'admin' ? 'Admin' : 'Inzien'
+}
 
 async function maakTeam() {
   if (!naam.value.trim()) return
   try {
-    const t = await pb.collection('teams').create({ naam: naam.value.trim(), eigenaar: user.value!.id })
-    naam.value = ''
+    const t = await pb.collection('teams').create({ naam: naam.value.trim(), eigenaar: eigenaar.value || user.value!.id })
     await navigateTo(`/teams/${t.id}`)
   } catch (e) { fout(e) }
 }
@@ -32,8 +41,11 @@ async function maakTeam() {
       </NuxtLink>
     </li>
   </ul>
-  <form class="flex gap-2" @submit.prevent="maakTeam">
-    <UInput v-model="naam" placeholder="Naam nieuw team" size="xl" class="flex-1" aria-label="Naam nieuw team" />
-    <UButton type="submit" label="Team maken" size="xl" icon="i-lucide-plus" />
+  <h2 class="mb-2 text-lg font-semibold">Nieuw team</h2>
+  <form class="grid gap-2" @submit.prevent="maakTeam">
+    <UInput v-model="naam" placeholder="Naam van het team" size="xl" aria-label="Naam nieuw team" />
+    <USelectMenu v-if="isAdmin" v-model="eigenaar" :items="trainers.map(t => ({ label: t.name, value: t.id }))" value-key="value"
+      placeholder="Eigenaar: ikzelf" size="xl" aria-label="Eigenaar (trainer)" />
+    <UButton type="submit" label="Team maken" size="xl" icon="i-lucide-plus" block variant="outline" />
   </form>
 </template>

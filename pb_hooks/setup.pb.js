@@ -9,7 +9,7 @@ routerAdd('POST', '/api/setup', (e) => {
   const body = e.requestInfo().body
   const clubnaam = String(body.clubnaam || '').trim()
   const naam = String(body.naam || '').trim()
-  const email = String(body.email || '').trim()
+  const email = String(body.email || '').trim().toLowerCase()
   const wachtwoord = String(body.wachtwoord || '')
   if (!clubnaam || !naam || !email || wachtwoord.length < 10) {
     throw new BadRequestError('Vul clubnaam, naam, e-mail en een wachtwoord van minstens 10 tekens in.')

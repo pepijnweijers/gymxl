@@ -15,11 +15,11 @@ onMounted(async () => {
   try {
     const f = pb.filter('leerling = {:id}', { id })
     const [l, a, g, b, teams] = await Promise.all([
-      pb.collection('leerlingen').getOne(id),
-      pb.collection('aanwezigheid').getFullList({ filter: f, fields: 'aanwezig' }),
-      pb.collection('groepsindeling').getFullList({ filter: f, sort: '-training_oefening.training.datum', expand: 'training_oefening.oefening,training_oefening.training' }),
-      pb.collection('beoordelingen').getFullList({ filter: f, sort: 'datum', expand: 'skill,door' }),
-      pb.collection('teams').getFullList({ filter: pb.filter('team_leerlingen_via_team.leerling ?= {:id}', { id }) }),
+      een('leerlingen', id),
+      lijst('aanwezigheid', { filter: f, fields: 'aanwezig' }),
+      lijst('groepsindeling', { filter: f, sort: '-training_oefening.training.datum', expand: 'training_oefening.oefening,training_oefening.training' }),
+      lijst('beoordelingen', { filter: f, sort: 'datum', expand: 'skill,door' }),
+      lijst('teams', { filter: pb.filter('team_leerlingen_via_team.leerling ?= {:id}', { id }), expand: TEAM_EXPAND }),
     ])
     leerling.value = l
     aanwezigheid.value = a
@@ -34,7 +34,7 @@ const percentage = computed(() => aanwezigheid.value.length ? Math.round(100 * a
 async function opslaan() {
   try {
     const l = leerling.value!
-    leerling.value = await pb.collection('leerlingen').update(id, { voornaam: l.voornaam, initiaal: l.initiaal, geboortejaar: l.geboortejaar || null, actief: l.actief })
+    Object.assign(leerling.value!, await schrijf('leerlingen', 'update', id, { voornaam: l.voornaam, initiaal: l.initiaal, geboortejaar: l.geboortejaar || null, actief: l.actief }))
     toast.add({ title: 'Opgeslagen', color: 'success' })
   } catch (e) { fout(e) }
 }

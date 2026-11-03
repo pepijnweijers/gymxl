@@ -16,20 +16,20 @@ const recht = computed(() => teamRecht(training.value?.expand?.team))
 async function laadIndeling() {
   const f = pb.filter('training = {:id}', { id })
   ;[trainingOefeningen.value, indeling.value] = await Promise.all([
-    pb.collection('training_oefeningen').getFullList({ filter: f, sort: 'volgorde', expand: 'oefening' }),
-    pb.collection('groepsindeling').getFullList({ filter: pb.filter('training_oefening.training = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }),
+    lijst('training_oefeningen', { filter: f, sort: 'volgorde', expand: 'oefening' }, d => d.training === id),
+    lijst('groepsindeling', { filter: pb.filter('training_oefening.training = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }, () => true),
   ])
 }
 
 onMounted(async () => {
   try {
-    training.value = await pb.collection('trainingen').getOne(id, { expand: 'team,trainer' })
+    training.value = await een('trainingen', id, { expand: `team,trainer,team.${TEAM_EXPAND}` })
     notitie.value = training.value.notitie
     const team = training.value.team
     const [a, o, h] = await Promise.all([
-      pb.collection('aanwezigheid').getFullList({ filter: pb.filter('training = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }),
-      pb.collection('oefeningen').getFullList({ sort: 'naam' }),
-      pb.collection('huidige_scores').getFullList({ filter: pb.filter('leerling.team_leerlingen_via_leerling.team ?= {:team}', { team }), fields: 'leerling,skill,score' }),
+      lijst('aanwezigheid', { filter: pb.filter('training = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }, d => d.training === id),
+      lijst('oefeningen', { sort: 'naam' }),
+      huidigeScores(team),
       laadIndeling(),
     ])
     aanwezigheid.value = a
@@ -41,7 +41,7 @@ onMounted(async () => {
 const aantalAanwezig = computed(() => aanwezigheid.value.filter(a => a.aanwezig).length)
 async function wissel(a: RecordModel) {
   try {
-    Object.assign(a, await pb.collection('aanwezigheid').update(a.id, { aanwezig: !a.aanwezig }, { expand: 'leerling' }))
+    Object.assign(a, await schrijf('aanwezigheid', 'update', a.id, { aanwezig: !a.aanwezig }))
   } catch (e) { fout(e) }
 }
 
@@ -56,11 +56,10 @@ async function maakGroepjesVoorOefening() {
   try {
     const kinderen = aanwezigheid.value.filter(a => a.aanwezig).map(a => ({ id: a.leerling, naam: kindNaam(a.expand?.leerling), scores: scores.value[a.leerling] ?? {} }))
     const { groepjes, nietBeoordeeld } = maakGroepjes(kinderen, oefening.skills, grootte.value)
-    const to = await pb.collection('training_oefeningen').create({ training: id, oefening: oefening.id, groepsgrootte: grootte.value, volgorde: trainingOefeningen.value.length + 1 })
-    const batch = pb.createBatch()
-    groepjes.forEach((g, i) => g.forEach(k => batch.collection('groepsindeling').create({ training_oefening: to.id, groepsnummer: i + 1, leerling: k.id, handmatig: false })))
-    nietBeoordeeld.forEach(k => batch.collection('groepsindeling').create({ training_oefening: to.id, groepsnummer: 0, leerling: k.id, handmatig: false }))
-    if (groepjes.length || nietBeoordeeld.length) await batch.send()
+    const to = await schrijf('training_oefeningen', 'create', null, { training: id, oefening: oefening.id, groepsgrootte: grootte.value, volgorde: trainingOefeningen.value.length + 1 }, { oefening })
+    const leerling = (lid: string) => aanwezigheid.value.find(a => a.leerling === lid)?.expand?.leerling
+    const indelen = [...groepjes.flatMap((g, i) => g.map(k => [k.id, i + 1] as const)), ...nietBeoordeeld.map(k => [k.id, 0] as const)]
+    await Promise.all(indelen.map(([lid, nr]) => schrijf('groepsindeling', 'create', null, { training_oefening: to.id, groepsnummer: nr, leerling: lid, handmatig: false }, { leerling: leerling(lid) })))
     await laadIndeling()
     oefeningId.value = undefined
     toast.add({ title: `Groepjes voor ${oefening.naam} gemaakt`, color: 'success' })
@@ -86,13 +85,13 @@ async function verplaatsNaar(n: number) {
   const r = verplaats.value!
   verplaatsOpen.value = false
   try {
-    Object.assign(r, await pb.collection('groepsindeling').update(r.id, { groepsnummer: n, handmatig: true }, { expand: 'leerling' }))
+    Object.assign(r, await schrijf('groepsindeling', 'update', r.id, { groepsnummer: n, handmatig: true }))
     toast.add({ title: 'Indeling opgeslagen', color: 'success', duration: 1500 })
   } catch (e) { fout(e) }
 }
 
 async function verwijderOefening(to: RecordModel) {
-  await pb.collection('training_oefeningen').delete(to.id).catch(fout)
+  await schrijf('training_oefeningen', 'delete', to.id).catch(fout)
   await laadIndeling()
 }
 
@@ -100,7 +99,7 @@ async function verwijderOefening(to: RecordModel) {
 const notitie = ref('')
 async function afronden() {
   try {
-    await pb.collection('trainingen').update(id, { notitie: notitie.value, afgerond: true })
+    await schrijf('trainingen', 'update', id, { notitie: notitie.value, afgerond: true })
     toast.add({ title: 'Training afgerond', color: 'success' })
     await navigateTo(`/teams/${training.value!.team}`)
   } catch (e) { fout(e) }

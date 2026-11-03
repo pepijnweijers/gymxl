@@ -4,7 +4,7 @@ const pb = usePb()
 const fout = useFout()
 const isAdmin = useIsAdmin()
 const skills = ref<RecordModel[]>([])
-const laad = async () => { skills.value = await pb.collection('skills').getFullList({ sort: 'categorie,naam' }).catch(e => (fout(e), [])) }
+const laad = async () => { skills.value = await lijst('skills', { sort: 'categorie,naam' }).catch(e => (fout(e), [])) }
 onMounted(laad)
 
 const leeg = () => ({ id: '', naam: '', omschrijving: '', categorie: '' })

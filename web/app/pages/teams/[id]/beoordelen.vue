@@ -16,13 +16,13 @@ const kind = computed(() => kinderen.value[index.value])
 onMounted(async () => {
   try {
     const [t, k, s, h] = await Promise.all([
-      pb.collection('teams').getOne(id),
-      pb.collection('team_leerlingen').getFullList({ filter: pb.filter('team = {:id} && leerling.actief = true', { id }), expand: 'leerling', sort: 'leerling.voornaam' }),
-      pb.collection('skills').getFullList({ sort: 'categorie,naam' }),
-      pb.collection('huidige_scores').getFullList({ filter: pb.filter('leerling.team_leerlingen_via_leerling.team ?= {:id}', { id }) }),
+      een('teams', id, { expand: TEAM_EXPAND }),
+      lijst('team_leerlingen', { filter: pb.filter('team = {:id}', { id }), expand: 'leerling', sort: 'leerling.voornaam' }, d => d.team === id),
+      lijst('skills', { sort: 'categorie,naam' }),
+      huidigeScores(id),
     ])
     team.value = t
-    kinderen.value = k.map(x => x.expand!.leerling)
+    kinderen.value = k.map(x => x.expand!.leerling).filter(l => l?.actief !== false)
     skills.value = s
     for (const r of h) scores.value[`${r.leerling}:${r.skill}`] = { score: r.score, datum: r.datum }
   } catch (e) { fout(e) }
@@ -37,8 +37,9 @@ const perCategorie = computed(() => {
 async function geef(skill: RecordModel, score: number) {
   const l = kind.value!
   try {
-    const r = await pb.collection('beoordelingen').create({ leerling: l.id, skill: skill.id, score, door: user.value!.id })
-    scores.value[`${l.id}:${skill.id}`] = { score, datum: r.datum }
+    // shortcut: offline krijgt de beoordeling de datum van het versturen (autodate op de server); prima zolang offline kort duurt.
+    const r = await schrijf('beoordelingen', 'create', null, { leerling: l.id, skill: skill.id, score, door: user.value!.id })
+    scores.value[`${l.id}:${skill.id}`] = { score, datum: r.datum ?? new Date().toISOString() }
     toast.add({ title: `${kindNaam(l)}: ${skill.naam} → ${SCORES[score - 1]!.label}`, color: 'success', duration: 1500 })
   } catch (e) { fout(e) }
 }
